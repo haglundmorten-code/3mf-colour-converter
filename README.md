@@ -61,3 +61,9 @@ preset Bambu Studio saves for PLA. See `tools/`.
 - The 3MF project formats follow the open-source PrusaSlicer, Bambu Studio and OrcaSlicer code.
 
 This is an independent tool, not affiliated with Prusa Research, Bambu Lab or OrcaSlicer.
+
+## License
+
+[GNU Affero General Public License v3.0](LICENSE), the same licence as PrusaSlicer and Bambu Studio. You may use, change
+and share this code, but if you publish a changed version, or run one as a website, you must share its source under the
+same licence.
