@@ -51,3 +51,13 @@ The printer and filament settings come from the slicers' own system presets: Pru
 (Prusa Research profiles) and Bambu Studio 02.08 (Bambu Lab profiles). PrusaSlicer 3.0 values were taken from real 3.0
 exports, 2.9 values resolved from the PrusaSlicer vendor bundle, and Bambu values are stored as differences from the
 preset Bambu Studio saves for PLA. See `tools/`.
+
+## Credits
+
+- Printer and filament settings in `prusa-profiles.js` and `filaments.js` are derived from the
+  [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) system profiles by Prusa Research (AGPL-3.0).
+- Printer and filament settings in `bambu-profiles.js` are derived from the
+  [Bambu Studio](https://github.com/bambulab/BambuStudio) system profiles by Bambu Lab (AGPL-3.0).
+- The 3MF project formats follow the open-source PrusaSlicer, Bambu Studio and OrcaSlicer code.
+
+This is an independent tool, not affiliated with Prusa Research, Bambu Lab or OrcaSlicer.
