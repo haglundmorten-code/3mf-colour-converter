@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3MF Colour Converter</title>
+<meta name="description" content="Convert painted multi-colour 3MF files between Bambu Studio / OrcaSlicer and PrusaSlicer in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 4 42 14 24 24 6 14Z' fill='%23f5a524'/%3E%3Cpath d='M6 14 24 24v20L6 34Z' fill='%23fa6831'/%3E%3Cpath d='M42 14 24 24v20l18-10Z' fill='%2300ae42'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f6f4f0; --panel: rgba(255,255,255,.86); --panel-solid: #ffffff; --text: #16181d; --muted: #5d6470;
+    --line: rgba(22,26,34,.09); --line-strong: rgba(22,26,34,.18); --soft: rgba(22,26,34,.045); --soft-2: rgba(22,26,34,.08);
+    --prusa: #fa6831; --bambu: #00ae42; --accent: #e8590c; --accent-ink: #ffffff;
+    --grad: linear-gradient(120deg, #fa6831 0%, #f5a524 50%, #00ae42 100%);
+    --btn-grad: linear-gradient(120deg, #d9480f 0%, #c2410c 45%, #08873a 100%);
+    --warn: #9a3412; --warn-bg: #fff3e6; --warn-line: #fed7aa; --ok: #05603a; --ok-bg: #e9f7ef; --ok-line: #a6e3c0;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 28px rgba(16,24,40,.07);
+    --glow-a: rgba(250,104,49,.20); --glow-b: rgba(0,174,66,.16); --dots: rgba(22,26,34,.07);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0e12; --panel: rgba(23,26,32,.80); --panel-solid: #181b21; --text: #eceef2; --muted: #9ba3af;
+      --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.18); --soft: rgba(255,255,255,.045); --soft-2: rgba(255,255,255,.09);
+      --warn: #fdba74; --warn-bg: rgba(251,146,60,.10); --warn-line: rgba(251,146,60,.25); --ok: #6ee7a0; --ok-bg: rgba(34,197,94,.10); --ok-line: rgba(34,197,94,.28);
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
+      --glow-a: rgba(250,104,49,.16); --glow-b: rgba(0,174,66,.13); --dots: rgba(255,255,255,.05);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e12; --panel: rgba(23,26,32,.80); --panel-solid: #181b21; --text: #eceef2; --muted: #9ba3af;
+    --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.18); --soft: rgba(255,255,255,.045); --soft-2: rgba(255,255,255,.09);
+    --warn: #fdba74; --warn-bg: rgba(251,146,60,.10); --warn-line: rgba(251,146,60,.25); --ok: #6ee7a0; --ok-bg: rgba(34,197,94,.10); --ok-line: rgba(34,197,94,.28);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.25);
+    --glow-a: rgba(250,104,49,.16); --glow-b: rgba(0,174,66,.13); --dots: rgba(255,255,255,.05);
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); font: 15px/1.55 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(700px 420px at 8% -8%, var(--glow-a), transparent 65%),
+      radial-gradient(700px 420px at 100% 4%, var(--glow-b), transparent 65%),
+      radial-gradient(var(--dots) 1px, transparent 1.2px) 0 0 / 22px 22px;
+    -webkit-mask-image: linear-gradient(#000 0, #000 55%, transparent 100%); mask-image: linear-gradient(#000 0, #000 55%, transparent 100%); }
+  main { max-width: 900px; margin: 0 auto; padding: 40px 16px 64px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* top bar: back to the planner */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -16px 0 28px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .brand { display: block; line-height: 0; }
+  .brand img { height: 34px; width: auto; display: block; }
+  .back { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--text); text-decoration: none; padding: 7px 12px 7px 9px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--panel-solid); transition: background .15s, border-color .15s; white-space: nowrap; }
+  .back:hover { background: var(--soft-2); border-color: var(--muted); }
+  .back svg { width: 15px; height: 15px; }
+  .back-short { display: none; }
+  @media (max-width: 560px) { .back-full { display: none; } .back-short { display: inline; } .brand img { height: 28px; } .topbar { margin-top: -8px; } }
+
+  /* header */
+  .hero { display: flex; gap: 18px; align-items: center; margin-bottom: 14px; }
+  .logo { width: 64px; height: 64px; flex: none; border-radius: 18px; display: grid; place-items: center; background: var(--panel-solid); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .logo svg { width: 40px; height: 40px; }
+  h1 { font: 700 30px/1.15 "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; margin: 0; letter-spacing: -.02em; }
+  .grad-text { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .route { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; font-size: 13px; font-weight: 600; }
+  .route .arrow { color: var(--muted); font-weight: 400; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 99px; background: var(--panel-solid); border: 1px solid var(--line); }
+  .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .chip.bambu { --c: var(--bambu); } .chip.prusa { --c: var(--prusa); }
+  .sub { color: var(--muted); margin: 0 0 22px; max-width: 680px; }
+  .perks { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; }
+  .perks li { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); background: var(--soft); border: 1px solid var(--line); padding: 5px 11px; border-radius: 99px; }
+  .perks svg { width: 14px; height: 14px; color: var(--text); opacity: .75; }
+
+  /* cards */
+  .panel { background: var(--panel); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 22px; margin-bottom: 16px; }
+  h2 { display: flex; align-items: center; gap: 10px; font-size: 17px; margin: 0 0 14px; letter-spacing: -.01em; }
+  .step { width: 26px; height: 26px; flex: none; border-radius: 8px; display: grid; place-items: center; background: var(--grad); color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px var(--glow-a); text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+
+  /* drop zone */
+  .drop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 16px; border: 2px dashed var(--line-strong); border-radius: 20px; padding: 40px 16px 36px; text-align: center; cursor: pointer; background: var(--panel); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: border-color .2s, background .2s, transform .2s, box-shadow .2s; }
+  .drop:hover, .drop.over { border-color: var(--accent); box-shadow: 0 0 0 6px var(--glow-a), var(--shadow); }
+  .drop.over { transform: scale(1.01); }
+  .drop-icon { width: 60px; height: 60px; border-radius: 18px; display: grid; place-items: center; margin-bottom: 10px; background: var(--grad); color: #fff; box-shadow: 0 8px 22px var(--glow-a); transition: transform .25s; }
+  .drop-icon svg { width: 28px; height: 28px; }
+  .drop:hover .drop-icon, .drop.over .drop-icon { transform: translateY(-3px) rotate(-4deg); }
+  .drop strong { display: block; font-size: 18px; letter-spacing: -.01em; }
+  .drop-sub { color: var(--muted); font-size: 14px; }
+  .drop input { display: none; }
+
+  /* file card */
+  .file { display: flex; gap: 18px; align-items: center; }
+  .file img { width: 104px; height: 104px; object-fit: contain; border-radius: 14px; flex: none; border: 1px solid var(--line);
+    background: radial-gradient(circle at 50% 35%, var(--panel-solid), var(--soft-2)); }
+  .file .name { font-weight: 700; font-size: 17px; word-break: break-word; margin-bottom: 4px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--soft-2); color: var(--muted); margin-right: 6px; }
+  .badge.bambu { background: #e3f6ea; color: #05603a; }
+  .badge.prusa { background: #feece2; color: #a3330d; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .badge.bambu { background: rgba(0,174,66,.16); color: #6ee7a0; } :root:not([data-theme="light"]) .badge.prusa { background: rgba(250,104,49,.16); color: #fdba74; } }
+  :root[data-theme="dark"] .badge.bambu { background: rgba(0,174,66,.16); color: #6ee7a0; } :root[data-theme="dark"] .badge.prusa { background: rgba(250,104,49,.16); color: #fdba74; }
+  .stats { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+  /* segmented controls and printer tabs */
+  .seg { display: inline-flex; background: var(--soft); border: 1px solid var(--line); border-radius: 13px; padding: 4px; gap: 4px; flex-wrap: wrap; max-width: 100%; }
+  .seg button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--muted); padding: 8px 14px; border-radius: 9px; font: inherit; font-weight: 600; cursor: pointer; transition: background .15s, color .15s, box-shadow .15s; }
+  .seg button:hover { color: var(--text); background: var(--soft-2); }
+  .seg button.on { background: var(--panel-solid); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.08); }
+  #targetSeg button::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: .45; transition: opacity .15s, box-shadow .15s; }
+  #targetSeg button[data-t="prusa"] { --c: var(--prusa); } #targetSeg button[data-t="bambu"] { --c: var(--bambu); }
+  #targetSeg button.on::before { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
+  .dots { display: inline-flex; }
+  .dots i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--panel-solid); margin-left: -3px; box-shadow: 0 0 0 .5px var(--line-strong); }
+  .dots i:first-child { margin-left: 0; }
+  #printerSeg button[data-id="new"] { color: var(--accent); }
+
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 0 10px 8px; }
+  td { padding: 10px; border-top: 1px solid var(--line); vertical-align: middle; transition: background .15s; }
+  tbody tr:hover td { background: var(--soft); }
+  .sw { display: inline-block; width: 24px; height: 24px; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14), 0 1px 2px rgba(0,0,0,.08); vertical-align: middle; margin-right: 10px; }
+  .fname { font-size: 13px; color: var(--muted); }
+  .bar { height: 8px; border-radius: 99px; background: var(--soft-2); overflow: hidden; min-width: 70px; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--muted); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  select, .fields input, .slot input[type=text] { font: inherit; font-weight: 400; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-strong); background-color: var(--panel-solid); color: var(--text); min-width: 0; transition: border-color .15s, box-shadow .15s; }
+  select { -webkit-appearance: none; appearance: none; padding-right: 32px; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%238a919c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; }
+  select:hover, .fields input:hover, .slot input[type=text]:hover { border-color: var(--muted); }
+  select:focus, .fields input:focus, .slot input[type=text]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow-a); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .legend div { display: inline-flex; align-items: center; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 6px 11px; font-size: 13px; }
+
+  /* buttons */
+  .actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; border: 0; background: var(--btn-grad); color: var(--accent-ink); font: inherit; font-weight: 700; padding: 11px 18px; border-radius: 11px; cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s, filter .15s; }
+  .btn:not(.secondary) { box-shadow: 0 6px 18px var(--glow-a), inset 0 1px 0 rgba(255,255,255,.18); }
+  .btn:not(.secondary):hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 10px 26px var(--glow-a), inset 0 1px 0 rgba(255,255,255,.18); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .55; cursor: progress; transform: none; }
+  .btn.big { font-size: 16px; padding: 15px 26px; border-radius: 13px; }
+  .btn.big svg { width: 20px; height: 20px; }
+  .btn.secondary { background: var(--panel-solid); color: var(--text); border: 1px solid var(--line-strong); font-weight: 600; padding: 9px 15px; }
+  .btn.secondary:hover { background: var(--soft-2); }
+  #delPrinter { color: #c2410c; }
+  .msg { border-radius: 12px; padding: 11px 15px; font-size: 14px; margin-top: 12px; border: 1px solid transparent; }
+  .msg.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
+  .msg.ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
+  .msg.ok::before { content: "✓"; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--ok); color: var(--panel-solid); font-size: 12px; font-weight: 800; margin-right: 8px; vertical-align: -4px; }
+  .msg a { color: inherit; font-weight: 700; }
+
+  /* busy */
+  #busy { display: flex; align-items: center; gap: 12px; }
+  .spinner { width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--soft-2); border-top-color: var(--prusa); border-right-color: var(--bambu); animation: spin .8s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* disclosures */
+  details { margin-top: 8px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details ol, details ul { padding-left: 22px; margin: 10px 0 4px; }
+  details li { margin: 6px 0; }
+  details li::marker { color: var(--accent); font-weight: 700; }
+  .how { border: 1px solid var(--line); border-radius: 12px; background: var(--soft); padding: 0; margin-top: 10px; }
+  .how > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+  .how > summary::-webkit-details-marker { display: none; }
+  .how > summary::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .how > summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; }
+  .how[open] > summary::after { transform: rotate(-135deg); }
+  .how > ol { padding: 0 16px 10px 36px; margin: 0; }
+  #howPrusa { --c: var(--prusa); } #howBambu { --c: var(--bambu); }
+  .hidden { display: none !important; }
+  .scroll { overflow-x: auto; }
+
+  /* My printers */
+  details.panel { margin-top: 0; }
+  details.panel > summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; list-style: none; font-size: 16px; }
+  details.panel > summary::-webkit-details-marker { display: none; }
+  details.panel > summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin: 0 4px 4px 0; }
+  details.panel[open] > summary::after { transform: rotate(-135deg); margin-bottom: -4px; }
+  .sum-title { display: inline-flex; align-items: center; gap: 10px; }
+  .sum-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--soft-2); }
+  .sum-icon svg { width: 17px; height: 17px; }
+  .sumstat { font-weight: 400; color: var(--muted); font-size: 14px; flex: 1; }
+  #slotList { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .slot { display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+  .slot b { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--soft-2); font-size: 12px; font-weight: 700; color: var(--muted); }
+  .slot input[type=color] { -webkit-appearance: none; appearance: none; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 11px; background: none; cursor: pointer; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14), 0 2px 6px rgba(0,0,0,.12); transition: transform .15s; }
+  .slot input[type=color]:hover { transform: scale(1.06); }
+  .slot input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  .slot input[type=color]::-webkit-color-swatch { border: 0; border-radius: 11px; }
+  .slot input[type=color]::-moz-color-swatch { border: 0; border-radius: 11px; }
+  .slot input[type=text] { flex: 1; }
+  .slot select.ftype { flex: none; width: 92px; font-weight: 600; }
+  .slot select.ftype.wide { width: 250px; }
+  .slot select.ftype.bad { border-color: var(--warn); color: var(--warn); background-color: var(--warn-bg); }
+  .slot-note { grid-column: 1 / -1; margin: 0; }
+  .slot button { border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; width: 34px; height: 34px; border-radius: 9px; flex: none; }
+  .slot button:hover { background: var(--warn-bg); color: var(--warn); }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+  .fields label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .fields input, .fields select { text-transform: none; letter-spacing: 0; font-size: 15px; }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .q { font-size: 12px; margin-top: 3px; }
+  .q.good { color: var(--ok); } .q.ok { color: var(--muted); } .q.bad { color: var(--warn); }
+  .tgt { display: flex; align-items: center; gap: 8px; }
+  .tgt .sw { width: 20px; height: 20px; border-radius: 50%; }
+  footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
+  footer .grad-text { font-weight: 700; }
+
+  /* entrance */
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .hero, .sub, .perks, .drop, #printerPanel { animation: rise .5s cubic-bezier(.2,.7,.2,1) both; }
+  .sub { animation-delay: .05s; } .perks { animation-delay: .1s; } .drop { animation-delay: .15s; } #printerPanel { animation-delay: .2s; }
+  #result:not(.hidden) > .panel { animation: rise .45s cubic-bezier(.2,.7,.2,1) both; }
+  #result > .panel:nth-child(2) { animation-delay: .05s; } #result > .panel:nth-child(3) { animation-delay: .1s; }
+  #result > .panel:nth-child(4) { animation-delay: .15s; } #result > .panel:nth-child(5) { animation-delay: .2s; }
+  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; transition: none !important; } }
+  @media (max-width: 560px) {
+    main { padding-top: 24px; }
+    .hero { gap: 14px; } .logo { width: 52px; height: 52px; border-radius: 15px; } .logo svg { width: 32px; height: 32px; }
+    h1 { font-size: 24px; }
+    .file img { width: 76px; height: 76px; } .hide-sm { display: none; }
+    .panel { padding: 18px; }
+    .slot { flex-wrap: wrap; } .slot input[type=text] { flex-basis: 100%; order: 3; }
+    .slot select.ftype.wide { width: auto; flex: 1 1 150px; min-width: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <nav class="topbar">
+    <a class="brand" href="https://honeycombplanner.com/" title="Honeycomb Planner">
+      <picture>
+        <source srcset="honeycomb-logo-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="honeycomb-logo.png" alt="Honeycomb Planner" width="1024" height="168">
+      </picture>
+    </a>
+    <a class="back" href="https://honeycombplanner.com/"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg><span class="back-full">Back to Honeycomb Planner</span><span class="back-short">Back</span></a>
+  </nav>
+  <header class="hero">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 48 48"><path d="M24 4 42 14 24 24 6 14Z" fill="#f5a524"/><path d="M6 14 24 24v20L6 34Z" fill="#fa6831"/><path d="M42 14 24 24v20l18-10Z" fill="#00ae42"/><path d="M24 24v20" stroke="rgba(0,0,0,.18)" stroke-width="1"/></svg>
+    </div>
+    <div>
+      <h1>3MF <span class="grad-text">Colour Converter</span></h1>
+      <div class="route"><span class="chip bambu">Bambu Studio</span><span class="arrow">⇄</span><span class="chip prusa">PrusaSlicer</span></div>
+    </div>
+  </header>
+  <p class="sub">Move painted models between Bambu Studio / OrcaSlicer and PrusaSlicer without repainting them.</p>
+  <ul class="perks">
+    <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg>100% local – nothing is uploaded</li>
+    <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5 13.5 5.5 6 13H3v-3Z"/></svg>Painted colours are kept</li>
+    <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="11" height="7" rx="1.5"/><path d="M5 13h6M8 10v3"/></svg>Remembers your printer</li>
+  </ul>
+
+  <label class="drop" id="drop">
+    <input type="file" id="pick" accept=".3mf">
+    <span class="drop-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 14v3.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V14"/></svg></span>
+    <strong>Drop a .3mf file here</strong>
+    <span class="drop-sub">or click to choose one – e.g. a model from MakerWorld or Printables</span>
+  </label>
+
+  <details class="panel" id="printerPanel">
+    <summary><span class="sum-title"><span class="sum-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6V2.5h7V6"/><rect x="2" y="6" width="12" height="6" rx="1.5"/><path d="M5 10.5h6V14H5Z"/></svg></span>My printers</span><span class="sumstat" id="printerSum"></span></summary>
+    <p class="hint" style="margin:10px 0 12px">Create a printer with the colour and filament type loaded in each slot (tool, MMU slot or AMS slot). It is saved in this browser and selected the next time you open the page. Files you convert then open with that printer and those filaments, and each colour in the model is matched to the nearest colour you have.</p>
+    <div class="seg" id="printerSeg"></div>
+    <p class="hint" id="noPrinter" style="margin:10px 0 0">You have no printers yet – click “+ New printer”.</p>
+    <div id="printerEdit" class="hidden">
+      <div class="fields">
+        <label>Name<input type="text" id="pName" maxlength="40" placeholder="E.g. My INDX"></label>
+        <label>Slicer<select id="pSlicer">
+          <option value="prusa3">PrusaSlicer 3.0 (alpha)</option>
+          <option value="prusa2">PrusaSlicer 2.9 or older</option>
+          <option value="bambu">Bambu Studio / OrcaSlicer</option>
+        </select></label>
+        <label>Printer<select id="pModel"></select></label>
+      </div>
+      <div id="slotList" style="margin-top:12px"></div>
+      <div class="row-btns">
+        <button class="btn secondary" id="addSlot">+ Add slot</button>
+        <button class="btn secondary hidden" id="fromFile">Use colours from the file</button>
+        <button class="btn secondary" id="delPrinter">Delete printer</button>
+      </div>
+      <p class="hint" id="printerUse"></p>
+    </div>
+  </details>
+
+  <div id="busy" class="panel hidden"><span class="spinner" aria-hidden="true"></span><span id="busyText">Reading the file …</span></div>
+  <div id="error" class="msg warn hidden"></div>
+
+  <section id="result" class="hidden">
+    <div class="panel">
+      <div class="file">
+        <img id="thumb" alt="" class="hidden">
+        <div>
+          <div class="name" id="fileName"></div>
+          <div><span class="badge" id="fmtBadge"></span><span class="stats" id="stats"></span></div>
+          <div class="stats" id="objList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">1</span>Convert to</h2>
+      <div class="seg" id="targetSeg">
+        <button data-t="prusa">PrusaSlicer</button>
+        <button data-t="bambu">Bambu Studio / OrcaSlicer</button>
+      </div>
+      <p class="hint" id="targetHint"></p>
+      <div id="psVerRow" class="hidden" style="margin-top:12px">
+        <label for="psVer"><b>PrusaSlicer version</b></label>
+        <select id="psVer" style="margin-left:8px">
+          <option value="3">PrusaSlicer 3.0 (alpha)</option>
+          <option value="2">PrusaSlicer 2.9 or older</option>
+        </select>
+      </div>
+      <div id="printerRow" class="hidden" style="margin-top:12px">
+        <label for="printerSel"><b id="printerLabel">Printer</b></label>
+        <select id="printerSel" style="margin-left:8px"></select>
+        <p class="hint" id="printerHint" style="margin:6px 0 0"></p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">2</span>Colours and extruders</h2>
+      <p class="hint" style="margin:0 0 12px">Each colour in the model goes to an extruder/filament slot – the same number by default. To merge colours (e.g. 7 colours on an MMU3 with 5 slots), pick the same extruder for several colours.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Colour in file</th><th class="hide-sm">Share painted</th><th>→ Extruder</th></tr></thead>
+          <tbody id="mapBody"></tbody>
+        </table>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div id="mapWarn" class="msg warn hidden"></div>
+      <div class="row-btns">
+        <button class="btn secondary hidden" id="autoMap">Match to my printer</button>
+        <button class="btn secondary" id="resetMap">Reset to 1:1</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">3</span>Download</h2>
+      <div class="actions">
+        <button class="btn big" id="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg>Convert and download</button>
+        <span class="stats" id="goState"></span>
+      </div>
+      <div id="done" class="msg ok hidden"></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="step">4</span>How to open the file</h2>
+      <details id="howPrusa" class="how">
+        <summary>In PrusaSlicer</summary>
+        <ol id="howPrusaProject">
+          <li id="howPs3Open">Open the file as a project: <b>File → Open project</b> (Ctrl+O). It opens in its own tab.</li>
+          <li id="howPs2Open">Open the file as a project: <b>File → Open project</b> (Ctrl+O), or drag it into an empty PrusaSlicer window. If PrusaSlicer asks, choose <b>“Open as project”</b> – <em>not</em> “Import geometry only”.</li>
+          <li>PrusaSlicer switches to the printer you chose above, with one filament slot per colour and the colours set. While the model is selected it shows all green – click next to it, or open the painting tool (N), to see the colours.</li>
+          <li>Feel free to change the filament profile (e.g. to your own PLA) in the right panel – the colours and painting stay.</li>
+        </ol>
+        <ol id="howPrusaModel" class="hidden">
+          <li>Select a printer with enough extruders (e.g. CORE One with MMU3, or INDX) <em>before</em> opening the file – on a single-extruder printer PrusaSlicer does not show the painting at all.</li>
+          <li>Open the file with <b>File → Import → Import STL/3MF/STEP/OBJ</b> (Ctrl+I), or drag it into the window.</li>
+          <li>Set the filament colours in the right panel as listed above. The painting is already on the right extruder.</li>
+          <li>Press <b>A</b> to arrange the model on the bed if it ended up at the edge.</li>
+        </ol>
+      </details>
+      <details id="howBambu" class="how">
+        <summary>In Bambu Studio / OrcaSlicer</summary>
+        <ol id="howBambuProject">
+          <li>Open the file as a project: <b>File → Open Project</b> (Ctrl+O), or double-click it / drag it into Bambu Studio.</li>
+          <li>Bambu Studio switches to the printer you chose above, with one filament per colour and the colours set. The painting shows right away.</li>
+          <li>Feel free to change the filament type (e.g. PLA Matte) in the left panel, or sync with the AMS – the colours and painting stay.</li>
+        </ol>
+        <ol id="howBambuModel" class="hidden">
+          <li>Open the file (drag it in, or <b>File → Import → Import 3MF/STL/STEP…</b>). If asked about the project, choose to load geometry.</li>
+          <li>Add filaments (the + button next to “Filament”) until you have as many as listed above, and give them those colours.</li>
+          <li>The painting is on the right filament number – open the painting tool (N) to see it.</li>
+        </ol>
+      </details>
+      <p class="hint">What carries over: geometry, painted colours, painted supports/seams/fuzzy skin, parts (modifiers, negative volumes, support blockers), names, placement, scaling and the extruder per object/part. Print settings (layer height, temperatures etc.) do not, because they are named differently and are printer specific.</p>
+    </div>
+  </section>
+
+  <footer>Works with files from Bambu Studio, OrcaSlicer, PrusaSlicer and MakerWorld/Printables · <span class="grad-text">No data leaves your computer</span></footer>
+</main>
+
+<script src="converter.js"></script>
+<script src="prusa-profiles.js"></script>
+<script src="bambu-profiles.js"></script>
+<script src="filaments.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const MAX_EXT = 16;
+  const STORE_KEY = 'conv3mf.printers.v2';
+  const OLD_STORE_KEY = 'conv3mf.printers.v1';
+  const BAMBU = window.BAMBU_PROFILES || { printers: [] };
+  const FILAMENTS = window.PRUSA_FILAMENTS || { p29: {}, p3: {}, conditions: [] };
+  // Printers whose settings can be written into converted files, per target slicer.
+  const PRINTERS = { prusa: window.PRUSA_PROFILES || [], bambu: BAMBU.printers };
+  const SLICER_LABEL = { prusa: 'PrusaSlicer', bambu: 'Bambu Studio' };
+  const DEFAULT_PRINTER = { prusa: PRINTERS.prusa.length ? PRINTERS.prusa[0].id : 'none', bambu: PRINTERS.bambu.length ? PRINTERS.bambu[0].id : 'none' };
+  const FORMAT_LABEL = { bambu: 'Bambu Studio / OrcaSlicer', prusa: 'PrusaSlicer', generic: 'Plain 3MF' };
+  const PRINTER_LABEL = { prusa: 'Prusa', bambu: 'Bambu' };
+  const FILAMENT_TYPES = ['PLA', 'PETG', 'ABS', 'ASA', 'TPU', 'PC'];
+  const nf = new Intl.NumberFormat('en-US');
+  let model = null, fileName = '', target = 'prusa', map = [], used = [], stats = null, thumbUrl = null, outUrl = null;
+  let match = []; // match[i] = colour distance for auto-matched colour i, undefined when set by hand
+  let profiles = loadProfiles();
+  let editId = null; // saved printer shown in "My printers"
+
+  function show(el, on) { el.classList.toggle('hidden', !on); }
+  function err(text) { $('error').textContent = text; show($('error'), !!text); }
+  const tick = () => new Promise((r) => setTimeout(r, 30));
+  function escapeHtml(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+  // ------------------------------------------------------------ saved printers
+
+  // A saved printer: { id, name, slicer: 'prusa'|'bambu', version: '3'|'2' (PrusaSlicer), model: profile id|'none', slots[] }.
+  // profiles.use[slicer] says what files for that slicer are written with: 'p:<printer id>', 'm:<profile id>', 'none',
+  // or '' for the first saved printer (else the first profile).
+  function cleanSlots(a) {
+    return (Array.isArray(a) ? a : []).slice(0, MAX_EXT).map((s) => ({
+      color: /^#[0-9a-f]{6}$/i.test(s && s.color) ? s.color.toLowerCase() : '#ffffff',
+      type: filamentType(s && s.type) || 'PLA',
+      profile: String((s && s.profile) || '').slice(0, 80),
+      name: String((s && s.name) || '').slice(0, 60),
+    }));
+  }
+  // A known filament type from free text ("PLA Matte" → PLA, "FLEX" → TPU, "CPE" → PETG), or ''.
+  function filamentType(t) {
+    const u = String(t || '').toUpperCase();
+    if (/FLEX|TPU|TPE/.test(u)) return 'TPU';
+    if (/^(PET|CPE|PCTG|NGEN)\b/.test(u)) return 'PETG';
+    return FILAMENT_TYPES.find((x) => new RegExp(`^${x}(\\b|[^A-Z]|$)`).test(u)) || '';
+  }
+  function cleanPrinter(p) {
+    const slicer = p && p.slicer === 'bambu' ? 'bambu' : 'prusa';
+    return {
+      id: String((p && p.id) || Math.random().toString(36).slice(2, 10)),
+      name: String((p && p.name) || 'My printer').slice(0, 40),
+      slicer,
+      version: p && p.version === '2' ? '2' : '3',
+      model: typeof (p && p.model) === 'string' ? p.model : DEFAULT_PRINTER[slicer],
+      slots: cleanSlots(p && p.slots),
+    };
+  }
+  function loadProfiles() {
+    const res = { printers: [], use: { prusa: '', bambu: '' }, prusaVersion: '3' };
+    try {
+      const p = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+      if (p) {
+        res.printers = (Array.isArray(p.printers) ? p.printers : []).map(cleanPrinter);
+        for (const t of ['prusa', 'bambu']) res.use[t] = String((p.use && p.use[t]) || '');
+        res.prusaVersion = p.prusaVersion === '2' ? '2' : '3';
+        return res;
+      }
+      // The older single colour setup per slicer becomes a named printer.
+      const old = JSON.parse(localStorage.getItem(OLD_STORE_KEY) || 'null');
+      if (old) {
+        res.prusaVersion = old.prusaVersion === '2' ? '2' : '3';
+        for (const t of ['prusa', 'bambu']) {
+          const id = typeof old[t + 'Printer'] === 'string' ? old[t + 'Printer'] : DEFAULT_PRINTER[t];
+          const s = cleanSlots(old[t]);
+          if (s.length) {
+            const pr = cleanPrinter({ name: `My ${PRINTER_LABEL[t]} printer`, slicer: t, version: res.prusaVersion, model: id, slots: s });
+            res.printers.push(pr);
+            res.use[t] = 'p:' + pr.id;
+          } else res.use[t] = id === 'none' ? 'none' : 'm:' + id;
+        }
+      }
+    } catch (_) { /* storage unavailable */ }
+    return res;
+  }
+  function saveProfiles() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(profiles)); } catch (_) { /* storage unavailable */ }
+  }
+
+  function printersFor(t) { return profiles.printers.filter((p) => p.slicer === t); }
+  function chosen(t) {
+    const u = profiles.use[t] || '';
+    if (u === 'none') return { none: true };
+    if (u.startsWith('p:')) { const p = printersFor(t).find((x) => x.id === u.slice(2)); if (p) return { printer: p }; }
+    if (u.startsWith('m:')) return { model: u.slice(2) };
+    const first = printersFor(t)[0];
+    return first ? { printer: first } : { model: DEFAULT_PRINTER[t] };
+  }
+  // PrusaSlicer 3.0 needs its own project format, which only some printers have settings for.
+  function ps3() { const c = chosen('prusa'); return (c.printer ? c.printer.version : profiles.prusaVersion) === '3'; }
+  function modelList(t, version) { return t === 'prusa' && version === '3' ? PRINTERS.prusa.filter((p) => p.project3) : PRINTERS[t]; }
+  function findModel(t, version, id) {
+    if (id === 'none') return null;
+    const list = modelList(t, version);
+    return list.find((p) => p.id === id) || list[0] || null;
+  }
+  // The printer profile written into files for slicer t, or null for "model only".
+  function printerProfile(t) {
+    const c = chosen(t);
+    if (c.none) return null;
+    return c.printer ? findModel(t, c.printer.version, c.printer.model) : findModel(t, profiles.prusaVersion, c.model);
+  }
+  // Prusa profiles have a fixed number of extruders; Bambu gets one filament per colour.
+  function slotLimit(p) { const m = findModel(p.slicer, p.version, p.model); return m && m.extruders ? m.extruders : MAX_EXT; }
+  function slots() { const c = chosen(target); return c.printer ? c.printer.slots.slice(0, slotLimit(c.printer)) : []; }
+  // Extruders available in the target printer, or 0 when not fixed.
+  function extruderCount() { const p = printerProfile(target); return p && p.extruders ? p.extruders : 0; }
+  function editing() { return profiles.printers.find((p) => p.id === editId) || null; }
+  function slicerLabel(p) { return p.slicer === 'bambu' ? 'Bambu Studio' : `PrusaSlicer ${p.version === '3' ? '3.0' : '2.9'}`; }
+  function modelName(p) { const m = findModel(p.slicer, p.version, p.model); return m ? m.name : 'other printer'; }
+  // Filament types with settings for a printer model (PrusaSlicer 3.0 has its own), or all types without a model.
+  function materialsOf(slicer, version, m) {
+    if (!m) return null;
+    return (slicer === 'prusa' && version === '3' ? m.materials3 : m.materials) || null;
+  }
+  function typesFor(p) {
+    const mats = materialsOf(p.slicer, p.version, findModel(p.slicer, p.version, p.model));
+    return mats ? FILAMENT_TYPES.filter((t) => mats[t]) : FILAMENT_TYPES;
+  }
+
+  // PrusaSlicer filament profiles a saved printer can use: [{ name, type, data }] (data from filaments.js), or null
+  // when the printer only has filament types (Bambu, other printer).
+  function profilesFor(p) {
+    const m = p.slicer === 'prusa' && findModel(p.slicer, p.version, p.model);
+    const list = m && (p.version === '3' ? m.filaments3 : m.filaments29);
+    if (!list) return null;
+    const table = p.version === '3' ? FILAMENTS.p3 : FILAMENTS.p29;
+    return Object.entries(list).map(([name, key]) => ({ name, type: table[key].type, data: table[key] }));
+  }
+  // The profile a slot uses: its own, else the one its filament type stands for.
+  function slotProfile(p, s, list) {
+    list = list || profilesFor(p);
+    if (!list) return null;
+    const own = s.profile && list.find((x) => x.name === s.profile);
+    if (own) return own;
+    const mats = materialsOf(p.slicer, p.version, findModel(p.slicer, p.version, p.model)) || {};
+    const t = mats[s.type];
+    const def = t && (p.version === '3' ? t.material.root_id : t.filament_settings_id.replace(/^"|"$/g, '').replace(/\s*@.*$/, ''));
+    return list.find((x) => x.name === def) || null;
+  }
+  // Settings for the converter: 2.9 config values, or 3.0 tool settings with the material conditions filled in.
+  function profileSettings(p, prof) {
+    if (!prof) return null;
+    if (p.version !== '3') return prof.data.values;
+    const d = prof.data;
+    return { filament: d.filament, material: Object.assign({}, d.material, { conditions: FILAMENTS.conditions[d.material.conditions] || [] }), slicerMaterial: d.slicerMaterial };
+  }
+  // Groups for the profile menu: the common types first, Generic and Prusament first within each.
+  function profileGroups(list) {
+    const groups = new Map();
+    const order = (n) => (/^Generic /.test(n) ? 0 : /^Prusament /.test(n) ? 1 : 2);
+    for (const x of [...list].sort((a, b) => order(a.name) - order(b.name) || a.name.localeCompare(b.name))) {
+      if (!groups.has(x.type)) groups.set(x.type, []);
+      groups.get(x.type).push(x);
+    }
+    const rank = (t) => { const i = FILAMENT_TYPES.indexOf(t); return i < 0 ? 99 : i; };
+    return [...groups.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]));
+  }
+  function slotLabel(s) { return s.profile || s.type; }
+
+  function renderPrinterSummary() {
+    $('printerSum').textContent = profiles.printers.length
+      ? profiles.printers.map((p) => `${p.name} (${p.slots.length} ${p.slots.length === 1 ? 'colour' : 'colours'})`).join(' · ')
+      : 'no printers saved yet';
+  }
+
+  function renderPrinterTabs() {
+    const seg = $('printerSeg');
+    seg.textContent = '';
+    for (const p of profiles.printers) {
+      const b = document.createElement('button');
+      b.dataset.id = p.id;
+      b.textContent = p.name || 'Unnamed';
+      if (p.slots.length) {
+        const dots = document.createElement('span');
+        dots.className = 'dots';
+        for (const s of p.slots.slice(0, 8)) { const i = document.createElement('i'); i.style.background = s.color; dots.appendChild(i); }
+        b.appendChild(dots);
+      }
+      b.classList.toggle('on', p.id === editId);
+      seg.appendChild(b);
+    }
+    const add = document.createElement('button');
+    add.dataset.id = 'new';
+    add.textContent = '+ New printer';
+    seg.appendChild(add);
+  }
+
+  function renderPrinterUse(p) {
+    const active = chosen(p.slicer).printer === p;
+    $('printerUse').textContent = active
+      ? `✓ Used when you convert to ${slicerLabel(p)}. Changes are saved right away and remembered next time you open the page.`
+      : `Not selected – click “${p.name}” above to use it.`;
+  }
+
+  function renderSlots() {
+    renderPrinterTabs();
+    renderPrinterSummary();
+    const p = editing();
+    show($('printerEdit'), !!p);
+    show($('noPrinter'), !p);
+    if (!p) return;
+    $('pName').value = p.name;
+    $('pSlicer').value = p.slicer === 'bambu' ? 'bambu' : 'prusa' + p.version;
+    const sel = $('pModel');
+    sel.textContent = '';
+    for (const m of modelList(p.slicer, p.version)) sel.add(new Option(m.name, m.id));
+    sel.add(new Option('Other printer – colours only', 'none'));
+    const m = findModel(p.slicer, p.version, p.model);
+    sel.value = m ? m.id : 'none';
+    const list = $('slotList');
+    list.textContent = '';
+    const arr = p.slots;
+    const limit = slotLimit(p);
+    const types = typesFor(p);
+    const profs = profilesFor(p);
+    const groups = profs && profileGroups(profs);
+    const missing = [];
+    if (!arr.length) {
+      const e = document.createElement('p');
+      e.className = 'hint';
+      e.style.margin = '0';
+      e.textContent = 'No slots added yet.';
+      list.appendChild(e);
+    }
+    arr.forEach((s, k) => {
+      const row = document.createElement('div');
+      row.className = 'slot';
+      row.innerHTML = `<b title="Slot ${k + 1}">${k + 1}</b>`;
+      if (k >= limit) row.style.opacity = '0.45';
+      const col = document.createElement('input');
+      col.type = 'color'; col.value = s.color; col.setAttribute('aria-label', `Colour in slot ${k + 1}`);
+      col.addEventListener('input', () => { s.color = col.value; profilesChanged(false); });
+      const type = document.createElement('select');
+      type.className = 'ftype';
+      if (profs) {
+        // Every PrusaSlicer profile for this printer, grouped by type.
+        type.classList.add('wide');
+        type.setAttribute('aria-label', `Filament profile in slot ${k + 1}`);
+        for (const [t, xs] of groups) {
+          const g = document.createElement('optgroup');
+          g.label = t;
+          for (const x of xs) g.appendChild(new Option(x.name, x.name));
+          type.appendChild(g);
+        }
+        const own = s.profile && profs.find((x) => x.name === s.profile);
+        const use = slotProfile(p, s, profs);
+        if (use && (own || !s.profile)) type.value = use.name;
+        else {
+          // A profile (or type) this printer doesn't have is kept; the file gets the fallback's settings.
+          type.add(new Option(`${slotLabel(s)} ⚠`, ''), 0);
+          type.value = '';
+          type.classList.add('bad');
+          type.title = `${slotLabel(s)} isn't available for this printer – the file gets ${use ? use.name : 'PLA'} settings`;
+          missing.push(`${slotLabel(s)} → ${use ? use.name : 'PLA'}`);
+        }
+        type.addEventListener('change', () => {
+          const x = profs.find((y) => y.name === type.value);
+          if (!x) return;
+          s.profile = x.name;
+          s.type = filamentType(x.type) || 'PLA';
+          profilesChanged(true);
+        });
+      } else {
+        type.setAttribute('aria-label', `Filament type in slot ${k + 1}`);
+        for (const t of types) type.add(new Option(t, t));
+        // A type this printer has no settings for is kept, but the file gets PLA settings for that slot.
+        if (!types.includes(s.type)) {
+          type.add(new Option(`${s.type} ⚠`, s.type));
+          type.classList.add('bad');
+          type.title = `No ${s.type} profile for this printer – the file gets PLA settings for this slot`;
+          missing.push(`${s.type} → PLA`);
+        }
+        type.value = s.type;
+        type.addEventListener('change', () => { s.type = type.value; s.profile = ''; profilesChanged(true); });
+      }
+      const name = document.createElement('input');
+      name.type = 'text'; name.value = s.name; name.placeholder = 'Name, e.g. Prusament PLA Galaxy Black';
+      name.setAttribute('aria-label', `Filament name in slot ${k + 1}`);
+      name.addEventListener('input', () => { s.name = name.value.slice(0, 60); profilesChanged(false); });
+      const del = document.createElement('button');
+      del.textContent = '×'; del.title = 'Remove slot'; del.setAttribute('aria-label', `Remove slot ${k + 1}`);
+      del.addEventListener('click', () => { arr.splice(k, 1); profilesChanged(true); });
+      row.append(col, type, name, del);
+      list.appendChild(row);
+    });
+    if (missing.length) {
+      const e = document.createElement('p');
+      e.className = 'msg warn slot-note';
+      e.textContent = `Not available in ${slicerLabel(p)} for ${modelName(p)}, so the file uses the nearest one: ${[...new Set(missing)].join(', ')}.`;
+      list.appendChild(e);
+    }
+    if (profs) {
+      const e = document.createElement('p');
+      e.className = 'hint slot-note';
+      e.textContent = `${profs.length} PrusaSlicer filament profiles for this printer – pick the one you have loaded, and the project opens with exactly that profile.`;
+      list.appendChild(e);
+    }
+    $('addSlot').disabled = arr.length >= limit;
+    show($('fromFile'), !!(model && model.filaments.some((f) => f.color)));
+    renderPrinterUse(p);
+  }
+
+  // structural=true re-renders the editor (add/remove, other printer model); colour/name edits keep focus in place.
+  function profilesChanged(structural) {
+    saveProfiles();
+    if (structural) renderSlots();
+    else { renderPrinterTabs(); renderPrinterSummary(); if (editing()) renderPrinterUse(editing()); }
+    if (model && (structural || chosen(target).printer === editing())) { autoMatch(); renderTarget(); renderMap(); }
+  }
+
+  // ------------------------------------------------------------ colour matching (CIELAB, ΔE76)
+
+  function hexToLab(hex) {
+    const n = parseInt(hex.slice(1, 7), 16);
+    const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const r = lin((n >> 16) & 255), g = lin((n >> 8) & 255), b = lin(n & 255);
+    const x = (r * 0.4124 + g * 0.3576 + b * 0.1805) / 0.95047;
+    const y = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const z = (r * 0.0193 + g * 0.1192 + b * 0.9505) / 1.08883;
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+  }
+  function deltaE(a, b) {
+    const p = hexToLab(a), q = hexToLab(b);
+    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  }
+  function quality(d) {
+    if (d == null) return null;
+    if (d < 12) return { cls: 'good', text: 'Good match' };
+    if (d < 30) return { cls: 'ok', text: 'Close' };
+    return { cls: 'bad', text: 'Poor match – no similar colour in the printer' };
+  }
+
+  // 1:1, except that colours beyond the printer's extruders go to the nearest colour that fits.
+  function identity() {
+    map = []; match = [];
+    const n = extruderCount();
+    for (const i of used) map[i] = i;
+    if (!n) return;
+    for (const i of used) {
+      if (i <= n) continue;
+      const c = filament(i).color;
+      let best = n, bestD = Infinity;
+      for (let k = 1; k <= n && c; k++) {
+        const kc = filament(k).color;
+        if (kc && deltaE(c, kc) < bestD) { bestD = deltaE(c, kc); best = k; }
+      }
+      map[i] = best;
+    }
+  }
+
+  function autoMatch() {
+    const s = slots();
+    if (!s.length) { identity(); return; }
+    map = []; match = [];
+    for (const i of used) {
+      const c = filament(i).color;
+      if (!c) { map[i] = Math.min(i, s.length); continue; }
+      let best = 0, bestD = Infinity;
+      s.forEach((slot, k) => { const d = deltaE(c, slot.color); if (d < bestD) { bestD = d; best = k; } });
+      map[i] = best + 1;
+      match[i] = bestD;
+    }
+  }
+
+  // ------------------------------------------------------------ file handling
+
+  async function handleFile(file) {
+    if (!file) return;
+    err('');
+    show($('result'), false);
+    show($('busy'), true);
+    $('busyText').textContent = `Reading ${file.name} …`;
+    await tick();
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      model = await Conv3MF.load3mf(buf);
+      fileName = file.name;
+      stats = Conv3MF.usage(model);
+      if (!model.objects.length) throw new Error('No objects found in the file.');
+      setup();
+    } catch (e) {
+      console.error(e);
+      err('Could not read the file: ' + (e && e.message ? e.message : e));
+    } finally {
+      show($('busy'), false);
+    }
+  }
+
+  function filament(i) {
+    const f = model.filaments[i - 1] || {};
+    return { color: f.color || '', name: [f.name, f.type && !String(f.name || '').includes(f.type) ? f.type : ''].filter(Boolean).join(' · ') };
+  }
+
+  function setup() {
+    $('fileName').textContent = fileName;
+    const b = $('fmtBadge');
+    b.textContent = FORMAT_LABEL[model.format];
+    b.className = 'badge ' + model.format;
+    $('stats').textContent = `${model.objects.length} object${model.objects.length === 1 ? '' : 's'} · ${nf.format(stats.triangles)} triangles · ${nf.format(stats.paintedTriangles)} painted`;
+    $('objList').textContent = model.objects.map((o) => o.name + (o.volumes.length > 1 ? ` (${o.volumes.length} parts)` : '') + (o.instances.length > 1 ? ` ×${o.instances.length}` : '')).join(', ');
+    err(model.badPaint ? `Note: ${nf.format(model.badPaint)} triangle${model.badPaint === 1 ? '' : 's'} had broken paint data and will be unpainted.` : '');
+    if (thumbUrl) URL.revokeObjectURL(thumbUrl);
+    thumbUrl = model.thumbnail ? URL.createObjectURL(new Blob([model.thumbnail], { type: 'image/png' })) : null;
+    $('thumb').src = thumbUrl || '';
+    show($('thumb'), !!thumbUrl);
+
+    target = model.format === 'prusa' ? 'bambu' : 'prusa';
+    used = [...stats.filaments.keys()].filter((i) => i > 0).sort((a, b) => a - b);
+    autoMatch();
+    renderTarget();
+    renderMap();
+    renderSlots();
+    show($('done'), false);
+    $('goState').textContent = '';
+    show($('result'), true);
+  }
+
+  function renderTarget() {
+    for (const btn of $('targetSeg').children) btn.classList.toggle('on', btn.dataset.t === target);
+    const same = model.format === target;
+    $('targetHint').textContent = same
+      ? 'The file is already in this format. You can still convert it to move colours to other extruders.'
+      : `The file is saved as a ${target === 'prusa' ? 'PrusaSlicer' : 'Bambu Studio'} 3MF with all painting kept.`;
+    $('howPrusa').open = target === 'prusa';
+    $('howBambu').open = target === 'bambu';
+    renderPrinterChoice();
+  }
+
+  function renderPrinterChoice() {
+    const sel = $('printerSel');
+    const c = chosen(target);
+    const mine = printersFor(target);
+    show($('psVerRow'), target === 'prusa' && !c.printer);
+    $('psVer').value = profiles.prusaVersion;
+    show($('printerRow'), PRINTERS[target].length > 0 || mine.length > 0);
+    $('printerLabel').textContent = `Printer in ${SLICER_LABEL[target]}`;
+    sel.textContent = '';
+    if (mine.length) {
+      const g = document.createElement('optgroup');
+      g.label = 'My printers';
+      for (const p of mine) g.appendChild(new Option(`${p.name} – ${modelName(p)}, ${slicerLabel(p)}`, 'p:' + p.id));
+      sel.appendChild(g);
+    }
+    const g2 = document.createElement('optgroup');
+    g2.label = mine.length ? 'Without saved colours' : 'Printer';
+    for (const p of modelList(target, profiles.prusaVersion)) g2.appendChild(new Option(p.name, 'm:' + p.id));
+    sel.appendChild(g2);
+    sel.add(new Option('Other printer – model only, I set up the printer myself', 'none'));
+    const prof = printerProfile(target);
+    sel.value = c.printer ? 'p:' + c.printer.id : prof ? 'm:' + prof.id : 'none';
+    const colours = c.printer ? `the colours from “${c.printer.name}”` : 'the colours';
+    let hint;
+    if (!prof) hint = `Only the model and painting are saved${c.printer ? `, with colours matched to the slots in “${c.printer.name}”` : ''}. You set up the printer and filaments yourself in ${SLICER_LABEL[target]}.`;
+    else if (target === 'prusa') hint = `The file opens in PrusaSlicer ${ps3() ? '3.0' : '2.9'} with ${prof.name} (${prof.extruders} filament slots) and ${colours} set. If the model has more colours than slots, the nearest ones are merged.${ps3() ? ' For PrusaSlicer 3.0 only the INDX printers are available here for now (the MMU3 was rebuilt in 3.0).' : ''}`;
+    else hint = `The file opens in Bambu Studio with ${prof.name} (0.4 mm nozzle, 0.20mm Standard, Bambu PLA Basic) and one filament per colour with ${colours} set, so the painting shows right away.`;
+    if (!c.printer) hint += ' Tip: create a printer under “My printers” at the top and your colours are remembered next time.';
+    if (!prof && target === 'prusa' && ps3()) hint += ' Note: PrusaSlicer 3.0 opens such files as geometry only, on the printer you already have selected.';
+    $('printerHint').textContent = hint;
+    show($('howPrusaProject'), !!printerProfile('prusa'));
+    show($('howPrusaModel'), !printerProfile('prusa'));
+    show($('howPs3Open'), ps3());
+    show($('howPs2Open'), !ps3());
+    show($('howBambuProject'), !!printerProfile('bambu'));
+    show($('howBambuModel'), !printerProfile('bambu'));
+  }
+
+  function targetLabel(e) {
+    const s = slots()[e - 1];
+    if (!s) return `Extruder ${e}`;
+    const pr = chosen(target).printer;
+    const use = pr && slotProfile(pr, s);
+    return `Slot ${e} · ${use ? use.name : s.type}${s.name ? ' · ' + s.name : ''}`;
+  }
+
+  function renderMap() {
+    const body = $('mapBody');
+    body.textContent = '';
+    const total = Math.max(1, stats.paintedTriangles);
+    const s = slots();
+    const count = extruderCount() || s.length || Math.max(MAX_EXT, ...used);
+    for (const i of used) {
+      const u = stats.filaments.get(i);
+      const f = filament(i);
+      const tr = document.createElement('tr');
+      const share = u.triangles / total;
+      const roles = [];
+      if (u.objects) roles.push('object default');
+      if (u.parts) roles.push('part');
+      tr.innerHTML = `
+        <td><span class="sw" style="background:${f.color || 'repeating-linear-gradient(45deg,#ccc 0 4px,#eee 4px 8px)'}"></span><b>Colour ${i}</b>
+          <div class="fname">${escapeHtml(f.name || (f.color ? f.color : 'unknown colour'))}${roles.length ? ' · ' + roles.join(', ') : ''}</div></td>
+        <td class="hide-sm"><div class="bar"><i style="width:${Math.max(share * 100, u.triangles ? 2 : 0)}%;background:${f.color || 'var(--muted)'}"></i></div>
+          <div class="fname">${u.triangles ? (share * 100).toFixed(share < 0.01 ? 1 : 0) + ' %' : '–'}</div></td>
+        <td><div class="tgt"></div></td>`;
+      const box = tr.querySelector('.tgt');
+      const sw = document.createElement('span');
+      sw.className = 'sw';
+      sw.style.margin = '0';
+      const sel = document.createElement('select');
+      sel.setAttribute('aria-label', `Extruder for colour ${i}`);
+      for (let e = 1; e <= Math.max(count, map[i] || 1); e++) {
+        const o = document.createElement('option');
+        o.value = e; o.textContent = targetLabel(e);
+        if (map[i] === e) o.selected = true;
+        sel.appendChild(o);
+      }
+      const q = document.createElement('div');
+      const paint = () => {
+        const slot = s[map[i] - 1];
+        show(sw, !!slot);
+        if (slot) sw.style.background = slot.color;
+        const qq = quality(match[i]);
+        q.className = 'q ' + (qq ? qq.cls : '');
+        q.textContent = qq ? qq.text : '';
+      };
+      sel.addEventListener('change', () => { map[i] = +sel.value; match[i] = undefined; paint(); renderLegend(); });
+      box.append(sw, sel);
+      tr.lastElementChild.appendChild(q);
+      paint();
+      body.appendChild(tr);
+    }
+    show($('autoMap'), s.length > 0);
+    renderLegend();
+  }
+
+  function renderLegend() {
+    const s = slots();
+    const groups = new Map();
+    for (const i of used) {
+      const e = map[i];
+      if (!groups.has(e)) groups.set(e, []);
+      groups.get(e).push(i);
+    }
+    const legend = $('legend');
+    legend.textContent = '';
+    const exts = [...groups.keys()].sort((a, b) => a - b);
+    for (const e of exts) {
+      const d = document.createElement('div');
+      const srcs = groups.get(e);
+      const slot = s[e - 1];
+      const sws = slot
+        ? `<span class="sw" style="background:${slot.color};width:14px;height:14px;margin-right:3px"></span>`
+        : srcs.map((x) => `<span class="sw" style="background:${filament(x).color || '#bbb'};width:14px;height:14px;margin-right:3px"></span>`).join('');
+      d.innerHTML = `${sws} ${escapeHtml(targetLabel(e))}: ${srcs.map((x) => 'colour ' + x).join(' + ')}`;
+      legend.appendChild(d);
+    }
+    const maxE = exts.length ? Math.max(...exts) : 1;
+    const warn = [];
+    if (!s.length && !extruderCount() && maxE > 5 && target === 'prusa') warn.push(`The file uses extruders up to ${maxE}. The Prusa MMU3 has 5 slots – merge colours, or create a printer under “My printers” at the top and it is done automatically.`);
+    const bad = used.filter((i) => match[i] != null && match[i] >= 30);
+    if (bad.length) warn.push(`${bad.map((i) => 'Colour ' + i).join(', ')} ${bad.length === 1 ? 'is' : 'are'} not in your printer – set to the nearest colour. Change filament or pick a slot yourself.`);
+    if (!s.length && exts.length && exts[exts.length - 1] !== exts.length) warn.push('Some extruder numbers are skipped – that works, but you need as many filaments as the highest number.');
+    $('mapWarn').textContent = warn.join(' ');
+    show($('mapWarn'), warn.length > 0);
+  }
+
+  // "Converted " first, so converted files sort together in a downloads folder; a re-converted file keeps one prefix.
+  function outName() {
+    const base = fileName.replace(/\.3mf$/i, '').replace(/^converted[\s_-]+/i, '').replace(/[_-]?(bambu|prusa3?)$/i, '');
+    return `Converted ${base}_${target === 'prusa' && ps3() && printerProfile('prusa') ? 'prusa3' : target}.3mf`;
+  }
+
+  async function go() {
+    const btn = $('go');
+    btn.disabled = true;
+    show($('done'), false);
+    $('goState').textContent = 'Converting …';
+    await tick();
+    try {
+      const t0 = performance.now();
+      const prof = printerProfile(target);
+      const colors = slots().map((x) => x.color);
+      const types = slots().map((x) => x.type);
+      const pr = chosen(target).printer;
+      const profiles = pr ? slots().map((x) => profileSettings(pr, slotProfile(pr, x))) : [];
+      let opts;
+      if (prof && target === 'prusa') opts = { printer: { config: prof.config, extruders: prof.extruders, colors, types, profiles, materials: prof.materials, materials3: prof.materials3, project3: prof.project3, format: ps3() ? 3 : 2 } };
+      else if (prof) opts = { printer: { settings: prof.settings, filamentKeys: BAMBU.filamentKeys, version: BAMBU.version, bed: prof.bed, colors, types, materials: prof.materials } };
+      const blob = await Conv3MF.convert(model, target, map, (i, n) => { $('goState').textContent = `Packing file ${i + 1} of ${n} …`; }, opts);
+      if (outUrl) URL.revokeObjectURL(outUrl);
+      outUrl = URL.createObjectURL(blob);
+      const name = outName();
+      const a = document.createElement('a');
+      a.href = outUrl; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      const secs = ((performance.now() - t0) / 1000).toFixed(1);
+      const d = $('done');
+      d.innerHTML = `Done in ${secs} s. <a href="${outUrl}" download="${escapeHtml(name)}">Download ${escapeHtml(name)}</a> (${(blob.size / 1048576).toFixed(1)} MB) if the download did not start.`;
+      show(d, true);
+      $('goState').textContent = '';
+    } catch (e) {
+      console.error(e);
+      $('goState').textContent = '';
+      err('Conversion failed: ' + (e && e.message ? e.message : e));
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ------------------------------------------------------------ wiring
+
+  const drop = $('drop');
+  $('pick').addEventListener('change', (e) => { handleFile(e.target.files[0]); e.target.value = ''; });
+  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => handleFile(e.dataTransfer.files[0]));
+  window.addEventListener('dragover', (e) => e.preventDefault());
+  window.addEventListener('drop', (e) => { e.preventDefault(); if (e.target !== drop && !drop.contains(e.target)) handleFile(e.dataTransfer.files[0]); });
+  $('targetSeg').addEventListener('click', (e) => {
+    const t = e.target.dataset && e.target.dataset.t;
+    if (!t) return;
+    target = t;
+    const c = chosen(t);
+    if (c.printer) editId = c.printer.id;
+    autoMatch();
+    renderTarget(); renderMap(); renderSlots();
+  });
+  // Picking a saved printer also makes it the one used for its slicer.
+  function usePrinter(p) {
+    profiles.use[p.slicer] = 'p:' + p.id;
+    editId = p.id;
+    if (model && p.slicer !== target && !chosen(target).printer) target = p.slicer;
+  }
+  $('printerSeg').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    const id = b && b.dataset.id;
+    if (!id) return;
+    if (id === 'new') {
+      const t = model ? target : (printersFor('prusa').length || !printersFor('bambu').length ? 'prusa' : 'bambu');
+      const prof = printerProfile(t);
+      const p = cleanPrinter({ name: `My printer ${profiles.printers.length + 1}`, slicer: t, version: profiles.prusaVersion, model: prof ? prof.id : DEFAULT_PRINTER[t] });
+      profiles.printers.push(p);
+      usePrinter(p);
+      profilesChanged(true);
+      $('pName').focus();
+      $('pName').select();
+      return;
+    }
+    const p = profiles.printers.find((x) => x.id === id);
+    if (p) { usePrinter(p); profilesChanged(true); }
+  });
+  $('pName').addEventListener('input', () => {
+    const p = editing();
+    if (p) { p.name = $('pName').value.slice(0, 40); profilesChanged(false); }
+  });
+  $('pSlicer').addEventListener('change', () => {
+    const p = editing();
+    if (!p) return;
+    const v = $('pSlicer').value;
+    const old = p.slicer;
+    p.slicer = v === 'bambu' ? 'bambu' : 'prusa';
+    if (p.slicer === 'prusa') p.version = v === 'prusa2' ? '2' : '3';
+    const list = modelList(p.slicer, p.version);
+    if (p.model !== 'none' && !list.some((m) => m.id === p.model)) p.model = list.length ? list[0].id : 'none';
+    if (old !== p.slicer && profiles.use[old] === 'p:' + p.id) profiles.use[old] = '';
+    usePrinter(p);
+    profilesChanged(true);
+  });
+  $('pModel').addEventListener('change', () => {
+    const p = editing();
+    if (p) { p.model = $('pModel').value; profilesChanged(true); }
+  });
+  $('addSlot').addEventListener('click', () => {
+    const p = editing();
+    if (p && p.slots.length < MAX_EXT) p.slots.push({ color: '#ffffff', type: p.slots.length ? p.slots[p.slots.length - 1].type : 'PLA', name: '' });
+    profilesChanged(true);
+  });
+  $('fromFile').addEventListener('click', () => {
+    const p = editing();
+    if (!p) return;
+    const profs = profilesFor(p) || [];
+    p.slots = cleanSlots(model.filaments.filter((f) => f.color).map((f) => {
+      const base = String(f.name || '').replace(/\s*@.*$/, '');
+      const prof = profs.find((x) => x.name === base);
+      return { color: f.color, type: filamentType(prof ? prof.type : f.type) || filamentType(f.name), profile: prof ? prof.name : '', name: f.name };
+    }));
+    profilesChanged(true);
+  });
+  $('delPrinter').addEventListener('click', () => {
+    const p = editing();
+    if (!p || !confirm(`Delete the printer “${p.name}”?`)) return;
+    profiles.printers = profiles.printers.filter((x) => x !== p);
+    for (const t of ['prusa', 'bambu']) if (profiles.use[t] === 'p:' + p.id) profiles.use[t] = '';
+    editId = profiles.printers.length ? profiles.printers[0].id : null;
+    profilesChanged(true);
+  });
+  $('printerSel').addEventListener('change', () => {
+    const v = $('printerSel').value;
+    profiles.use[target] = v;
+    if (v.startsWith('p:')) editId = v.slice(2);
+    saveProfiles();
+    renderSlots();
+    if (model) { autoMatch(); renderTarget(); renderMap(); }
+  });
+  $('psVer').addEventListener('change', () => {
+    profiles.prusaVersion = $('psVer').value === '2' ? '2' : '3';
+    saveProfiles();
+    renderSlots();
+    if (model) { autoMatch(); renderTarget(); renderMap(); }
+  });
+  $('autoMap').addEventListener('click', () => { autoMatch(); renderMap(); });
+  $('resetMap').addEventListener('click', () => { identity(); renderMap(); });
+  $('go').addEventListener('click', go);
+
+  const start = chosen('prusa').printer || chosen('bambu').printer || profiles.printers[0];
+  if (start) editId = start.id;
+  else $('printerPanel').open = true;
+  saveProfiles();
+  renderSlots();
+})();
+</script>
+</body>
+</html>

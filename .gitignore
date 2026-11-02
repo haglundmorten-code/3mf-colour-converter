@@ -1,0 +1,13 @@
+# Build output of deploy/deploy.mjs
+deploy/public/
+deploy/.wrangler/
+.wrangler/
+
+# Local tools and test leftovers
+.claude/
+_t3test.3mf
+*_test.png
+result.json
+
+# The downloaded honeycombplanner.com site is a separate project (and holds third-party models)
+honeycomb-site/

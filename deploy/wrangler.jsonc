@@ -1,0 +1,16 @@
+// Serves the converter at honeycombplanner.com/converter/ as its own Worker,
+// next to (not inside) the honeycomb-planner Pages project. Deploy with: node deploy/deploy.mjs
+{
+  "name": "honeycomb-converter",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "routes": [
+    { "pattern": "honeycombplanner.com/converter", "zone_name": "honeycombplanner.com" },
+    { "pattern": "honeycombplanner.com/converter/*", "zone_name": "honeycombplanner.com" }
+  ]
+}
